@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pigeon 32 — Graphing Calculator &amp; PigeonSend</title>
+  <!-- EB Garamond provides the signature looptail 'g'; VT323 gives the retro LCD screen font -->
+  <link href="https://googleapis.com" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #121418;
+      --panel: #1c2026;
+      --border: #2e3440;
+      --text: #eef2f6;
+      --muted: #9aa4b2;
+      --accent: #e05252; /* Playground-ball red accent for the 50th MSG key */
+      --blue: #3b82f6;
+      --lcd-bg: #9ead86;
+      --lcd-ink: #141a10;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* Looptail 'g' signature class */
+    .looptail {
+      font-family: 'EB Garamond', Georgia, serif;
+      letter-spacing: 0.5px;
+    }
+
+    header {
+      text-align: center;
+      padding: 50px 20px 30px;
+      border-bottom: 1px solid var(--border);
+      background: radial-gradient(circle at top, #1f2530 0%, var(--bg) 70%);
+    }
+
+    header h1 {
+      font-size: 4rem;
+      margin: 0;
+      line-height: 1.05;
+    }
+
+    .tagline {
+      color: var(--muted);
+      font-size: 1.1rem;
+      margin: 10px 0 20px;
+    }
+
+    .pill-nav {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .pill-nav a {
+      color: var(--text);
+      text-decoration: none;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.9rem;
+    }
+
+    .pill-nav a:hover {
+      border-color: var(--blue);
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 35px 20px;
+    }
+
+    h2 {
+      font-size: 2rem;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .section-sub {
+      text-align: center;
+      color: var(--muted);
+      margin-top: 0;
+      margin-bottom: 28px;
+    }
+
+    /* ================= CALCULATOR SIMULATOR ================= */
+    .calc-wrapper {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 50px;
+    }
+
+    .calc-body {
+      background: #272b33;
+      border: 3px solid #3c424e;
+      border-radius: 22px;
+      padding: 20px 18px 26px;
+      width: 370px;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.55);
+    }
+
+    .calc-top-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding: 0 4px;
+    }
+
+    .calc-brand {
+      font-size: 1.45rem;
+      font-weight: 700;
+      color: #e2e8f0;
+    }
+
+    .calc-model {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #94a3b8;
+      letter-spacing: 1px;
+    }
+
+    /* Monochrome LCD Screen */
+    .lcd-bezel {
+      background: #14171c;
+      padding: 10px;
+      border-radius: 10px;
+      margin-bottom: 12px;
+    }
+
+    .lcd-screen {
+      background: var(--lcd-bg);
+      color: var(--lcd-ink);
+      font-family: 'VT323', monospace;
+      height: 155px;
+      padding: 10px 12px;
+      border-radius: 4px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.25);
+      user-select: none;
+    }
+
+    .lcd-status {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 2px solid var(--lcd-ink);
+      padding-bottom: 2px;
+      font-size: 1.15rem;
+    }
+
+    .lcd-main {
+      font-size: 1.45rem;
+      line-height: 1.25;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .lcd-softbar {
+      display: flex;
+      justify-content: space-between;
+      border-top: 2px solid var(--lcd-ink);
+      padding-top: 2px;
+      font-size: 1.05rem;
+    }
+
+    .lcd-softbar span {
+      background: var(--lcd-ink);
+      color: var(--lcd-bg);
+      padding: 0 6px;
+      border-radius: 2px;
+    }
+
+    /* 50-Key Keypad Grid */
+    .key-row-6 {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 6px;
+      margin-bottom: 7px;
+    }
+
+    .key-row-5 {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      margin-bottom: 7px;
+    }
+
+    button.key {
+      background: #3a404c;
+      color: #f8fafc;
+      border: 1px solid #1e2229;
+      border-bottom: 3px solid #16191f;
+      border-radius: 5px;
+      padding: 7px 2px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.05s;
+    }
+
+    button.key:active {
+      transform: translateY(2px);
+      border-bottom-width: 1px;
+    }
+
+    button.key-soft {
+      background: #4b5563;
+      padding: 4px 2px;
+      font-size: 0.68rem;
+    }
+
+    button.key-msg {
+      background: var(--accent);
+      color: #fff;
+      border-color: #991b1b;
+    }
+
+    button.key-blue {
+      background: #2563eb;
+      color: #fff;
+    }
+
+    button.key-num {
+      background: #1f242d;
+      font-size: 0.85rem;
+    }
+
+    .keypad-caption {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 10px;
+    }
+
+    /* ================= INTERACTIVE CAMPUS MAP ================= */
+    .map-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 50px;
+    }
+
+    .map-controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .btn {
+      background: var(--blue);
+      color: white;
+      border: none;
+      padding: 9px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    .btn-secondary {
+      background: #334155;
+    }
+
+    .btn:hover { opacity: 0.9; }
+
+    .map-svg-wrap {
+      width: 100%;
+      overflow-x: auto;
+      display: flex;
+      justify-content: center;
+    }
+
+    svg {
+      background: #14181f;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      max-width: 100%;
+      height: auto;
+    }
+
+    .map-log {
+      margin-top: 14px;
+      padding: 12px;
+      background: #13161b;
+      border-radius: 8px;
+      border-left: 4px solid var(--blue);
+      font-size: 0.95rem;
+      color: #cbd5e1;
+    }
+
+    /* ================= LINEUP & ORIGIN ================= */
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
+      margin-bottom: 50px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 22px;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 999px;
+      margin-bottom: 10px;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-active { background: #16a34a; color: #fff; }
+    .badge-planned { background: #475569; color: #e2e8f0; }
+
+    .origin-box {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      max-width: 760px;
+      margin: 0 auto 30px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 25px;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HERO HEADER -->
+  <header>
+    <h1 class="looptail">Pigeon 32</h1>
+    <p class="tagline">Graphing Calculator &bull; 50-Key <span class="looptail">PigeonSend</span> &bull; 450-Foot Coop&reg; Beam</p>
+    <div class="pill-nav">
+      <a href="#simulator">Try PI-32 Simulator</a>
+      <a href="#pigeonnet">PigeonNet&copy; Map</a>
+      <a href="#lineup">PI-32 &ndash; PI-40 Lineup</a>
+      <a href="#origin">Oct 2026 Origin</a>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- 1. INTERACTIVE 50-KEY CALCULATOR SIMULATOR -->
+    <section id="simulator">
+      <h2 class="looptail">Interactive PI-32 Prototype</h2>
+      <p class="section-sub">Click the <strong>50th red MSG key</strong>, soft keys (<strong>F1–F6</strong>), or numbers to test the LCD workflow.</p>
+
+      <div class="calc-wrapper">
+        <div class="calc-body">
+          <div class="calc-top-label">
+            <span class="calc-brand looptail">Pigeon</span>
+            <span class="calc-model">PI-32 &bull; 50-KEY</span>
+          </div>
+
+          <!-- LCD Display -->
+          <div class="lcd-bezel">
+            <div class="lcd-screen">
+              <div class="lcd-status">
+                <span id="lcd-title" class="looptail">Message &bull; Coop&reg;</span>
+                <span>10:58</span>
+              </div>
+              <div class="lcd-main" id="lcd-content">
+                <div><strong>Message from RE_32</strong></div>
+                <div style="font-size:1.15rem;">Press F1 (OP) to open</div>
+              </div>
+              <div class="lcd-softbar" id="lcd-softkeys">
+                <span>OP</span>
+                <span>CL</span>
+                <span>OK</span>
+                <span>COOP</span>
+                <span>F=MA</span>
+                <span>GRAPH</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 1: 6 Soft Menu Keys (F1-F6) -->
+          <div class="key-row-6">
+            <button class="key key-soft" onclick="pressSoft(1)">F1</button>
+            <button class="key key-soft" onclick="pressSoft(2)">F2</button>
+            <button class="key key-soft" onclick="pressSoft(3)">F3</button>
+            <button class="key key-soft" onclick="pressSoft(4)">F4</button>
+            <button class="key key-soft" onclick="pressSoft(5)">F5</button>
